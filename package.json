@@ -1,0 +1,33 @@
+{
+  "name": "natural-language-interface",
+  "version": "1.0.0",
+  "description": "Natural-language command line suggestions powered by TypeSafe Jev",
+  "scripts": {
+    "nli": "tsx src/cli.ts",
+    "gen-spec": "tsx scripts/gen-spec.ts",
+    "eval": "tsx scripts/eval.ts",
+    "typecheck": "tsc -p ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.4.2",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.4.2",
+  "type": "module",
+  "dependencies": {
+    "@typesafe-ai/sdk": "^0.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  },
+  "bin": {
+    "nli": "./bin/nli"
+  }
+}

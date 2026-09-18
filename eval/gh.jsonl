@@ -1,0 +1,37 @@
+{"request": "リポジトリ一覧を取得", "path": "repo list", "line": "gh repo list"}
+{"request": "自分のリポジトリを50件表示", "path": "repo list", "line": "gh repo list --limit 50"}
+{"request": "privateリポジトリだけ一覧で見たい", "path": "repo list", "line": "gh repo list --visibility private"}
+{"request": "cli/cli をクローンしたい", "path": "repo clone", "line": "gh repo clone cli/cli"}
+{"request": "このリポジトリをブラウザで開く", "path": "browse", "line": "gh browse"}
+{"request": "新しいリポジトリを作る", "path": "repo create"}
+{"request": "リポジトリをフォークする", "path": "repo fork"}
+{"request": "リポジトリの説明を見たい", "path": "repo view"}
+{"request": "PR一覧", "path": "pr list", "line": "gh pr list"}
+{"request": "マージ済みのプルリクを見る", "path": "pr list", "line": "gh pr list --state merged"}
+{"request": "ドラフトでプルリクを作成", "path": "pr create", "line": "gh pr create --draft"}
+{"request": "PR 123 をチェックアウト", "path": "pr checkout", "line": "gh pr checkout 123"}
+{"request": "プルリクをスカッシュマージして", "path": "pr merge", "line": "gh pr merge --squash"}
+{"request": "PRのCIの結果を確認", "path": "pr checks", "line": "gh pr checks"}
+{"request": "プルリクの差分を見る", "path": "pr diff", "line": "gh pr diff"}
+{"request": "PRを承認する", "path": "pr review", "line": "gh pr review --approve"}
+{"request": "自分に関係あるPRの状況", "path": "pr status", "line": "gh pr status"}
+{"request": "イシューを立てる", "path": "issue create", "line": "gh issue create"}
+{"request": "閉じたissueも含めて一覧", "path": "issue list", "line": "gh issue list --state all"}
+{"request": "issue 42 を閉じる", "path": "issue close", "line": "gh issue close 42"}
+{"request": "issue 7 にコメントしたい", "path": "issue comment", "line": "gh issue comment 7"}
+{"request": "バグのラベルが付いたイシューを探す", "path": "issue list"}
+{"request": "ワークフローの実行履歴", "path": "run list", "line": "gh run list"}
+{"request": "失敗したジョブを再実行", "path": "run rerun", "line": "gh run rerun --failed"}
+{"request": "実行中のActionsを見守る", "path": "run watch", "line": "gh run watch"}
+{"request": "ワークフローを手動で起動", "path": "workflow run"}
+{"request": "リリースを作成 v1.0.0", "path": "release create", "line": "gh release create v1.0.0"}
+{"request": "最新リリースのアセットをダウンロード", "path": "release download", "line": "gh release download"}
+{"request": "ログインしてるか確認", "path": "auth status", "line": "gh auth status"}
+{"request": "GitHubにログイン", "path": "auth login", "line": "gh auth login"}
+{"request": "gistを作る", "path": "gist create", "line": "gh gist create"}
+{"request": "リポジトリのシークレットを一覧表示", "path": "secret list", "line": "gh secret list"}
+{"request": "GitHub全体からリポジトリを検索 react", "path": "search repos", "line": "gh search repos react"}
+{"request": "拡張機能を入れる", "path": "extension install"}
+{"request": "SSH鍵を登録", "path": "ssh-key add"}
+{"request": "キャッシュを全部消す", "path": "cache delete", "line": "gh cache delete --all"}
+{"request": "コーヒーを淹れて", "path": "none of these"}
