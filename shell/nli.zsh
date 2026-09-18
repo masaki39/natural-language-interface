@@ -32,16 +32,20 @@ bindkey -M vicmd "${NLI_KEY:-^X^N}" nli-widget
 
 # Enter on "nli <tool> <request>" suggests instead of running. Lines with options
 # (nli gh ... --explain) and nli's own commands (nli list, nli init) run as usual.
-# The builtin .accept-line is called directly: plugins such as zsh-autosuggestions wrap whatever
-# accept-line is, so they still run around this widget, and loading this file twice is harmless.
+# Enter is rebound rather than accept-line redefined: dotfiles and plugins often replace or wrap
+# accept-line after this runs, and `zle accept-line` below calls whatever it ends up being.
 if [[ ${NLI_ENTER:-1} != 0 ]]; then
-  nli-accept-line() {
+  nli-enter() {
     local -a words=(${(z)BUFFER})
     if [[ ${words[1]} == nli && ${#words} -ge 3 && ${words[2]} != (list|init) && -z ${(M)words:#-*} ]]; then
       zle nli-widget
     else
-      zle .accept-line
+      zle accept-line
     fi
   }
-  zle -N accept-line nli-accept-line
+  zle -N nli-enter
+  for keymap in emacs viins vicmd; do
+    bindkey -M $keymap '^M' nli-enter
+  done
+  unset keymap
 fi
