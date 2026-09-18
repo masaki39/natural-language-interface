@@ -1,7 +1,9 @@
 # Load from ~/.zshrc with: eval "$(nli init zsh)"
 #
-#   nli gh リポジトリ一覧 <Enter>   →   gh repo list      (set NLI_ENTER=0 before the eval to opt out)
-#   gh リポジトリ一覧 <Ctrl-X Ctrl-N> →   gh repo list      (or $NLI_KEY, set before the eval)
+#   nli gh リポジトリ一覧 <Enter>   →   gh repo list      (NLI_ENTER=0 to opt out)
+#   gh リポジトリ一覧 <Alt-N>        →   gh repo list      (NLI_KEY to change the key)
+#
+# Set NLI_KEY / NLI_ENTER before the eval.
 #
 # The line is replaced with the suggestion and nothing runs until you press Enter again.
 
@@ -27,8 +29,10 @@ nli-widget() {
   rm -f $err
 }
 zle -N nli-widget
-bindkey "${NLI_KEY:-^X^N}" nli-widget
-bindkey -M vicmd "${NLI_KEY:-^X^N}" nli-widget
+for keymap in emacs viins vicmd; do
+  bindkey -M $keymap "${NLI_KEY:-^[n}" nli-widget
+done
+unset keymap
 
 # Enter on "nli <tool> <request>" suggests instead of running. Lines with options
 # (nli gh ... --explain) and nli's own commands (nli list, nli init) run as usual.

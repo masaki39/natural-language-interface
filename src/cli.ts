@@ -14,7 +14,7 @@ const SURE = 0.6;
 
 const HELP = `usage: nli <tool> <request...> [options]
        nli list        tools nli can use (installed, with a spec source)
-       nli init zsh    print the zsh widget; add eval "$(nli init zsh)" to ~/.zshrc
+       nli init zsh    print the zsh keybindings; add eval "$(nli init zsh)" to ~/.zshrc
 
 Suggest a command line for a natural-language request. Nothing is executed:
 the command goes to stdout, explanations go to stderr.
@@ -44,12 +44,14 @@ function explain(result: Result, ms: number) {
   console.error(`\n${ms} ms, ${result.usage.requests} requests, ${result.usage.input_tokens} input tokens`);
 }
 
+/** The picked line, undefined when cancelled, or the top line when fzf isn't installed. */
 function fzf(lines: string[]): string | undefined {
   const r = spawnSync("fzf", ["--height=~10", "--prompt=nli> "], {
     input: lines.join("\n"),
     stdio: ["pipe", "pipe", "inherit"],
     encoding: "utf8",
   });
+  if (r.error) return lines[0];
   return r.status === 0 ? r.stdout.trim() : undefined;
 }
 
