@@ -1,32 +1,39 @@
 {
   "name": "natural-language-interface",
-  "version": "1.0.0",
-  "description": "Natural-language command line suggestions powered by TypeSafe Jev",
+  "version": "0.1.0",
+  "description": "Natural-language command line suggestions for any CLI, powered by TypeSafe Jev",
+  "author": "masaki39",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/masaki39/natural-language-interface.git"
+  },
+  "type": "module",
+  "bin": {
+    "nli": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "shell"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
+    "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist/cli.js",
+    "prepare": "pnpm build",
     "nli": "tsx src/cli.ts",
     "eval": "tsx scripts/eval.ts",
     "typecheck": "tsc -p ."
   },
-  "author": "",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "12.4.2",
-      "onFail": "download"
-    }
-  },
-  "packageManager": "pnpm@12.4.2",
-  "type": "module",
   "dependencies": {
     "@typesafe-ai/sdk": "^0.6.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.1",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"
   },
-  "bin": {
-    "nli": "./bin/nli"
-  }
+  "packageManager": "pnpm@12.4.2"
 }

@@ -1,4 +1,4 @@
-# Source from ~/.zshrc. Type a request after the tool name and press Ctrl-X Ctrl-N:
+# Load from ~/.zshrc with: eval "$(nli init zsh)". Type a request after the tool name and press Ctrl-X Ctrl-N:
 #   gh リポジトリ一覧を取得   →   gh repo list
 # The line is replaced with the suggestion and nothing runs until you press Enter.
 nli-widget() {

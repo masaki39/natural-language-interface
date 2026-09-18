@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { createBackend, loadDotEnv } from "./backend.ts";
 import { NONE, suggest, type Result } from "./engine.ts";
@@ -9,6 +12,7 @@ import { getSpec, SOURCES, type Source } from "./spec.ts";
 const SURE = 0.6;
 
 const HELP = `usage: nli <tool> <request...> [options]
+       nli init zsh    print the zsh widget; add eval "$(nli init zsh)" to ~/.zshrc
 
 Suggest a command line for a natural-language request. Nothing is executed:
 the command goes to stdout, explanations go to stderr.
@@ -47,7 +51,15 @@ function fzf(lines: string[]): string | undefined {
   return r.status === 0 ? r.stdout.trim() : undefined;
 }
 
+/** The widget ships in shell/, next to both src/ (tsx) and dist/ (installed). */
+function printInit(shell: string | undefined) {
+  if (shell !== "zsh") throw new Error(`nli init supports zsh only (got ${shell ?? "nothing"})`);
+  const file = join(dirname(fileURLToPath(import.meta.url)), "..", "shell", "nli.zsh");
+  process.stdout.write(readFileSync(file, "utf8"));
+}
+
 async function main() {
+  if (process.argv[2] === "init") return printInit(process.argv[3]);
   loadDotEnv();
   const { values, positionals } = parseArgs({
     allowPositionals: true,

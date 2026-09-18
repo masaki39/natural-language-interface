@@ -1,4 +1,0 @@
-#!/bin/sh
-# Resolve symlinks (pnpm link --global) so tsx is found next to the package.
-dir=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
-exec "$dir/node_modules/.bin/tsx" "$dir/src/cli.ts" "$@"

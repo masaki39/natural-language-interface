@@ -33,21 +33,32 @@ flag in the output exists in the tool's spec. No LLM is involved; a suggestion t
    (`src/candidates.ts`). Jev never writes a value; it only picks a span.
 4. Code assembles the command line. Required arguments that were not found become `<placeholders>`.
 
-## Setup
+## Install
 
 ```sh
-pnpm install
+pnpm add -g github:masaki39/natural-language-interface   # builds dist/ on install
+pnpm remove -g natural-language-interface               # uninstall
+```
+
+Then in `~/.zshrc`:
+
+```sh
 export OPENROUTER_API_KEY=...   # model ~typesafe/jev-latest via /api/alpha/decisions
 # or TYPESAFE_API_KEY=...        # direct; both set → OpenRouter, force with NLI_BACKEND=typesafe
-# (a gitignored .env next to package.json works too, see .env.example)
-
-bin/nli gh 'PR一覧'                # or: pnpm nli gh 'PR一覧'
-source shell/nli.zsh              # zsh widget (expects `nli` on PATH)
+eval "$(nli init zsh)"           # Ctrl-X Ctrl-N widget
 ```
 
 Type `gh マージ済みのプルリク` at the prompt and press `Ctrl-X Ctrl-N`: the line becomes
 `gh pr list --state merged`, and nothing runs until you press Enter. When the answer is uncertain
 an fzf picker shows the top candidates.
+
+## Development
+
+```sh
+pnpm install
+pnpm nli gh 'PR一覧' --explain    # runs src/ with tsx; a gitignored .env works here (.env.example)
+pnpm typecheck && pnpm build
+```
 
 ## Usage
 
