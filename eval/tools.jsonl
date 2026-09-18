@@ -1,0 +1,26 @@
+{"tool": "git", "request": "変更を一時退避", "path": "stash push"}
+{"tool": "git", "request": "mainブランチに切り替え", "path": "switch", "line": "git switch main"}
+{"tool": "git", "request": "コミット履歴を1行ずつ", "path": "log", "line": "git log --oneline"}
+{"tool": "git", "request": "ステージした差分を見る", "path": "diff"}
+{"tool": "git", "request": "リモートの変更を取り込む", "path": "pull", "line": "git pull"}
+{"tool": "git", "request": "新しいブランチ feature/login を作って移動", "path": "switch", "line": "git switch --create feature/login"}
+{"tool": "git", "request": "未追跡ファイルを消す", "path": "clean"}
+{"tool": "git", "request": "タグ v2.0.0 を付ける", "path": "tag", "line": "git tag v2.0.0"}
+{"tool": "docker", "request": "動いてるコンテナ一覧", "path": "ps", "line": "docker ps"}
+{"tool": "docker", "request": "全部のコンテナを表示", "path": "ps", "line": "docker ps --all"}
+{"tool": "docker", "request": "イメージ一覧", "path": "images", "line": "docker images"}
+{"tool": "docker", "request": "composeで起動してバックグラウンドで", "path": "compose up", "line": "docker compose up --detach"}
+{"tool": "docker", "request": "使ってないイメージを掃除", "path": "image prune"}
+{"tool": "kubectl", "request": "podの一覧をすべてのnamespaceで", "path": "get", "line": "kubectl get pod --all-namespaces"}
+{"tool": "kubectl", "request": "コンテキストを切り替える", "path": "config use-context"}
+{"tool": "kubectl", "request": "deploymentを3台にスケール", "path": "scale"}
+{"tool": "brew", "request": "パッケージを更新", "path": "upgrade", "line": "brew upgrade"}
+{"tool": "brew", "request": "jq をインストール", "path": "install", "line": "brew install jq"}
+{"tool": "brew", "request": "インストール済みの一覧", "path": "list", "line": "brew list"}
+{"tool": "uv", "request": "requestsを依存に追加", "path": "add", "line": "uv add requests"}
+{"tool": "uv", "request": "仮想環境を作る", "path": "venv", "line": "uv venv"}
+{"tool": "pnpm", "request": "依存をインストール", "path": "install", "line": "pnpm install"}
+{"tool": "pnpm", "request": "古いパッケージを確認", "path": "outdated", "line": "pnpm outdated"}
+{"tool": "aws", "request": "s3のバケット一覧", "path": "s3 ls"}
+{"tool": "aws", "request": "lambda関数の一覧", "path": "lambda list-functions", "line": "aws lambda list-functions"}
+{"tool": "herdr", "request": "サーバーを止める", "path": "server stop", "line": "herdr server stop"}

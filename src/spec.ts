@@ -1,14 +1,18 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { expandFigGroup, figSpec } from "./sources/fig.ts";
+import { ghSpec } from "./sources/gh.ts";
+import { helpSpec } from "./sources/help.ts";
 
 export type Flag = {
+  /** As typed on the command line: "--limit", or "-name" for single-dash tools like find. */
   long: string;
+  /** As typed on the command line: "-L". */
   short?: string;
   /** Value placeholder such as "string" or "int"; absent for boolean flags. */
   valueType?: string;
-  /** Allowed values parsed from `{a|b|c}` in the description. */
+  /** Allowed values, when the source lists them. */
   enum?: string[];
   description: string;
 };
@@ -19,7 +23,7 @@ export type Positional = {
 };
 
 export type Command = {
-  /** Subcommand path without the tool name, e.g. "repo list". */
+  /** Subcommand path without the tool name, e.g. "repo list"; "" for the tool itself. */
   path: string;
   usage: string;
   summary: string;
@@ -27,99 +31,105 @@ export type Command = {
   flags: Flag[];
 };
 
-export type Spec = {
-  tool: string;
-  version: string;
-  commands: Command[];
+/** A node that only holds subcommands. Selection descends through groups when a tool is too big to list flat. */
+export type Group = {
+  path: string;
+  summary: string;
+  /** Fig spec file holding this group's subcommands, fetched when selection first enters the group. */
+  load?: string;
 };
 
-export const SPECS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "specs");
+export const SOURCES = ["gh", "fig", "help"] as const;
+export type Source = (typeof SOURCES)[number];
 
-export function loadSpec(tool: string): Spec {
-  const file = join(SPECS_DIR, `${tool}.json`);
-  if (!existsSync(file)) {
-    throw new Error(`spec not found: ${file} (run: pnpm gen-spec ${tool})`);
-  }
-  return JSON.parse(readFileSync(file, "utf8")) as Spec;
+/** Bump when parsing changes, so cached specs from older code are rebuilt on next use. */
+const SPEC_FORMAT = 2;
+
+export type Spec = {
+  format: number;
+  tool: string;
+  source: Source;
+  version: string;
+  commands: Command[];
+  groups: Group[];
+};
+
+/** Keep criteria short: the first sentence is what separates one command from another. */
+export function summarize(text: string | undefined, max = 160): string {
+  const line = (text ?? "").replace(/\s+/g, " ").trim();
+  const sentence = line.match(/^.+?[.!?](?=\s|$)/)?.[0] ?? line;
+  return sentence.length > max ? `${sentence.slice(0, max - 1)}…` : sentence;
 }
 
-const HEADING = /^#{2,4} gh (.+)$/;
-const FLAG_LINE = /^\s+(?:-([A-Za-z0-9]), )?--([A-Za-z0-9-]+)(?: (\S+))?\s{2,}(.*)$/;
-
-/** Words of the usage line up to the first argument or flag placeholder. */
-function commandPath(usage: string): string {
-  const words: string[] = [];
-  for (const word of usage.split(/\s+/)) {
-    if (!/^[a-z][a-z0-9-]*$/.test(word)) break;
-    words.push(word);
-  }
-  return words.join(" ");
-}
-
-function parsePositionals(usage: string, path: string): Positional[] {
-  const rest = usage.slice(path.length);
+/**
+ * Positionals in the argument part of a usage line. `[<a>]`, `[<a> | <b>]` and `{<a> | --all}`
+ * are optional; alternatives each become a slot, and span dedup keeps one value per span.
+ */
+export function usagePositionals(args: string): Positional[] {
   const positionals: Positional[] = [];
-  // Only simple `<name>` / `[<name>]` forms; alternatives like `{<a> | <b>}` take the first name.
-  const re = /(\[)?<([A-Za-z0-9_-]+)>/g;
-  const seen = new Set<string>();
-  for (const m of rest.matchAll(re)) {
+  for (const m of args.matchAll(/(\[)?<([\w-]+)>/g)) {
     const name = m[2]!;
-    if (name === "command" || seen.has(name)) continue;
-    seen.add(name);
-    const before = rest.slice(0, m.index);
+    if (/^(command|subcommand|options?|flags?)$/i.test(name) || positionals.some((p) => p.name === name)) continue;
+    const before = args.slice(0, m.index);
     const optional = Boolean(m[1]) || before.lastIndexOf("[") > before.lastIndexOf("]") || /\{[^}]*$/.test(before);
     positionals.push({ name, required: !optional });
   }
   return positionals;
 }
 
-/** Parse the markdown emitted by `gh help reference` into a command spec. */
-export function parseGhReference(markdown: string, version: string): Spec {
-  const sections: Command[] = [];
-  let current: Command | undefined;
-  let summaryPending = false;
+const CACHE_DIR = join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "nli", "specs");
 
-  for (const line of markdown.split("\n")) {
-    const heading = line.match(HEADING);
-    if (heading) {
-      const usage = heading[1]!.trim();
-      const path = commandPath(usage);
-      current = { path, usage: `gh ${usage}`, summary: "", positionals: parsePositionals(usage, path), flags: [] };
-      sections.push(current);
-      summaryPending = true;
-      continue;
-    }
-    if (!current) continue;
-    if (summaryPending && line.trim() !== "") {
-      current.summary = line.trim();
-      summaryPending = false;
-      continue;
-    }
-    const flag = line.match(FLAG_LINE);
-    if (flag) {
-      const [, short, long, valueType, description] = flag;
-      const enumMatch = description!.match(/\{([^{}]+\|[^{}]+)\}/);
-      current.flags.push({
-        long: long!,
-        ...(short ? { short } : {}),
-        ...(valueType ? { valueType } : {}),
-        ...(enumMatch ? { enum: enumMatch[1]!.split("|") } : {}),
-        description: description!.trim(),
-      });
-    }
-  }
-
-  // A heading is a group (not runnable on its own) when another heading extends its path.
-  const paths = sections.map((c) => c.path);
-  const commands = sections.filter(
-    (c) => c.path !== "" && !paths.some((p) => p !== c.path && p.startsWith(`${c.path} `)),
-  );
-  return { tool: "gh", version, commands };
+function cacheFile(tool: string) {
+  return join(CACHE_DIR, `${tool}.json`);
 }
 
-export function generateSpec(tool: string): Spec {
-  if (tool !== "gh") throw new Error(`no spec generator for ${tool} yet`);
-  const markdown = execFileSync("gh", ["help", "reference"], { encoding: "utf8" });
-  const version = execFileSync("gh", ["--version"], { encoding: "utf8" }).split("\n")[0]!;
-  return parseGhReference(markdown, version);
+export function saveSpec(spec: Spec) {
+  mkdirSync(CACHE_DIR, { recursive: true });
+  writeFileSync(cacheFile(spec.tool), `${JSON.stringify(spec, null, 2)}\n`);
+}
+
+async function generate(tool: string, source: Source): Promise<Omit<Spec, "format">> {
+  switch (source) {
+    case "gh":
+      return ghSpec();
+    case "fig":
+      return figSpec(tool);
+    case "help":
+      return helpSpec(tool);
+  }
+}
+
+/**
+ * Build a spec from the most accurate source available: gh's own reference, then the
+ * Fig autocomplete spec, then the tool's --help output. Specs are cached until --refresh.
+ */
+export async function getSpec(tool: string, { refresh = false, source }: { refresh?: boolean; source?: Source } = {}) {
+  if (!refresh && !source && existsSync(cacheFile(tool))) {
+    const cached = JSON.parse(readFileSync(cacheFile(tool), "utf8")) as Spec;
+    if (cached.format === SPEC_FORMAT) return cached;
+    source = cached.source;
+  }
+  const order: Source[] = source ? [source] : tool === "gh" ? ["gh"] : ["fig", "help"];
+  const errors: string[] = [];
+  for (const s of order) {
+    try {
+      const spec = { ...(await generate(tool, s)), format: SPEC_FORMAT };
+      if (spec.commands.length === 0 && spec.groups.length === 0) throw new Error("no commands found");
+      saveSpec(spec);
+      return spec;
+    } catch (err) {
+      errors.push(`${s}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  throw new Error(`could not build a spec for ${tool} (${errors.join("; ")})`);
+}
+
+/** Fill a lazily loaded group in place and persist it, so the fetch happens once. */
+export async function expandGroup(spec: Spec, group: Group) {
+  if (!group.load) return;
+  const loaded = await expandFigGroup(spec.tool, group.path, group.load);
+  spec.commands.push(...loaded.commands);
+  spec.groups.push(...loaded.groups);
+  delete group.load;
+  saveSpec(spec);
 }

@@ -1,13 +1,14 @@
 import type { ChoiceCriteria, Questions } from "@typesafe-ai/sdk";
 import type { Ask, Reply } from "./backend.ts";
 import { extractCandidates } from "./candidates.ts";
+import { NONE, selectCommand, type Ranked } from "./select.ts";
 import type { Command, Spec } from "./spec.ts";
 
-export const NONE = "none of these";
+export { NONE };
 const UNSET = "not specified";
 
 /** Flags that take structured syntax (jq, Go templates, field lists) no request will spell out. */
-const SKIPPED_FLAGS = new Set(["jq", "template", "json", "help"]);
+const SKIPPED_FLAGS = new Set(["--jq", "--template", "--json", "--help", "--version"]);
 
 /** Noul probability above which a boolean flag is added; 0.5 let through borderline guesses like `auth login --web`. */
 const FLAG_THRESHOLD = 0.6;
@@ -15,10 +16,8 @@ const FLAG_THRESHOLD = 0.6;
 /** Probability a value or enum choice needs before it is added; weaker picks are usually guesses. */
 const VALUE_THRESHOLD = 0.6;
 
-export type Ranked = { path: string; probability: number };
-
 export type Slot = {
-  /** `--long` for flags, `<name>` for positionals. */
+  /** The flag as typed (`--limit`), or `<name>` for positionals. */
   slot: string;
   value: string | true;
   probability: number;
@@ -42,25 +41,6 @@ export type Result = {
   suggestions: Suggestion[];
   usage: { input_tokens: number; requests: number };
 };
-
-export function commandQuestion(spec: Spec): Questions {
-  const criteria: ChoiceCriteria = {};
-  for (const c of spec.commands) criteria[c.path] = `${c.summary} (usage: ${c.usage})`;
-  criteria[NONE] = `No ${spec.tool} subcommand performs what the request asks for.`;
-  return {
-    command: {
-      type: "choice",
-      instructions: {
-        task: `Pick the \`${spec.tool}\` subcommand that performs what \`request\` asks for.`,
-        notes: [
-          "The request may be written in Japanese or English.",
-          "Asking to see several items, or items filtered by a condition (merged, closed, labeled...), means a list or search command, not a view of one item.",
-        ],
-      },
-      criteria,
-    },
-  };
-}
 
 /** Questions that fill one command's flags and positionals, keyed `<prefix>:<slot>`. */
 function slotQuestions(command: Command, prefix: string, candidates: string[], spanKeys: Set<string>): Questions {
@@ -86,9 +66,9 @@ function slotQuestions(command: Command, prefix: string, candidates: string[], s
   }
   for (const f of command.flags) {
     if (SKIPPED_FLAGS.has(f.long)) continue;
-    const key = `${prefix}:--${f.long}`;
+    const key = `${prefix}:${f.long}`;
     // Structured fields beat a single sentence here: the flag's description is matched as a behavior.
-    const option = { command: command.usage, option: `--${f.long}`, behavior: f.description };
+    const option = { command: command.usage, option: f.long, behavior: f.description };
     if (!f.valueType) {
       questions[key] = {
         type: "noul",
@@ -119,14 +99,14 @@ function quote(value: string): string {
 }
 
 function assemble(tool: string, command: Command, slots: Slot[]): string {
-  const parts = [tool, command.path];
+  const parts = [tool, command.path].filter(Boolean);
   for (const p of command.positionals) {
     const filled = slots.find((s) => s.slot === `<${p.name}>`);
     if (filled) parts.push(quote(String(filled.value)));
     else if (p.required) parts.push(`<${p.name}>`);
   }
   for (const s of slots) {
-    if (!s.slot.startsWith("--")) continue;
+    if (s.slot.startsWith("<")) continue;
     parts.push(s.value === true ? s.slot : `${s.slot} ${quote(s.value)}`);
   }
   return parts.join(" ");
@@ -168,11 +148,8 @@ export async function suggest(
   request: string,
   { topK = 3, minAltProbability = 0.05 }: SuggestOptions = {},
 ): Promise<Result> {
-  const first = await ask({ request }, commandQuestion(spec));
-  const answer = first.answers.command!;
-  const ranking = Object.entries(answer.probabilities!)
-    .map(([path, probability]) => ({ path, probability }))
-    .sort((a, b) => b.probability - a.probability);
+  const selection = await selectCommand(ask, spec, request);
+  const { ranking } = selection;
 
   const chosen = ranking
     .filter((r, i) => r.path !== NONE && (i === 0 || r.probability >= minAltProbability))
@@ -185,8 +162,8 @@ export async function suggest(
   chosen.forEach((c, i) => Object.assign(questions, slotQuestions(c.command, String(i), candidates, spanKeys)));
 
   let answers: Reply["answers"] = {};
-  let inputTokens = first.usage.input_tokens;
-  let requests = 1;
+  let inputTokens = selection.input_tokens;
+  let requests = selection.requests;
   if (Object.keys(questions).length > 0) {
     const second = await ask({ request, candidates }, questions);
     answers = second.answers;
@@ -198,5 +175,5 @@ export async function suggest(
     const slots = readSlots(answers, String(i), spanKeys);
     return { path: c.path, probability: c.probability, line: assemble(spec.tool, c.command, slots), slots };
   });
-  return { confidence: answer.confidence!, ranking, suggestions, usage: { input_tokens: inputTokens, requests } };
+  return { confidence: selection.confidence, ranking, suggestions, usage: { input_tokens: inputTokens, requests } };
 }

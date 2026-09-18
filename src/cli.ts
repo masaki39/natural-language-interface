@@ -2,8 +2,8 @@
 import { spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
 import { createBackend, loadDotEnv } from "./backend.ts";
-import { commandQuestion, NONE, suggest, type Result } from "./engine.ts";
-import { loadSpec } from "./spec.ts";
+import { NONE, suggest, type Result } from "./engine.ts";
+import { getSpec, SOURCES, type Source } from "./spec.ts";
 
 /** Below this subcommand confidence, alternatives are shown next to the top answer. */
 const SURE = 0.6;
@@ -13,9 +13,11 @@ const HELP = `usage: nli <tool> <request...> [options]
 Suggest a command line for a natural-language request. Nothing is executed:
 the command goes to stdout, explanations go to stderr.
 
-  --pick      choose among the top candidates with fzf
+  --pick      choose among the top candidates with fzf when unsure
   --explain   show probabilities, latency and token usage
-  --dry-run   show the size of the first request without calling the API
+  --refresh   rebuild the tool's spec (cached in ~/.cache/nli/specs)
+  --source    where to build the spec from: gh | fig | help
+              (default: gh for gh, else a Fig autocomplete spec, else --help)
 
 environment: OPENROUTER_API_KEY or TYPESAFE_API_KEY (OpenRouter wins when both
 are set; force one with NLI_BACKEND=openrouter|typesafe), NLI_MODEL
@@ -52,23 +54,25 @@ async function main() {
     options: {
       pick: { type: "boolean" },
       explain: { type: "boolean" },
-      "dry-run": { type: "boolean" },
+      refresh: { type: "boolean" },
+      source: { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
   const [tool, ...words] = positionals;
-  if (values.help || !tool || words.length === 0) {
+  const refreshOnly = Boolean(values.refresh || values.source) && words.length === 0;
+  if (values.help || !tool || (words.length === 0 && !refreshOnly)) {
     console.error(HELP);
     process.exit(values.help ? 0 : 1);
   }
-  const request = words.join(" ");
-  const spec = loadSpec(tool);
-
-  if (values["dry-run"]) {
-    const body = JSON.stringify({ state: { request }, questions: commandQuestion(spec) });
-    console.error(`${spec.commands.length} subcommands, ${body.length} chars in the first request`);
+  const source = values.source as Source | undefined;
+  if (source && !SOURCES.includes(source)) throw new Error(`unknown --source ${source} (${SOURCES.join(" | ")})`);
+  const spec = await getSpec(tool, { refresh: values.refresh, source });
+  if (refreshOnly) {
+    console.error(`${tool}: ${spec.commands.length} commands, ${spec.groups.length} groups from ${spec.source} (${spec.version})`);
     return;
   }
+  const request = words.join(" ");
 
   const started = Date.now();
   const backend = createBackend();
@@ -84,7 +88,8 @@ async function main() {
     process.exit(1);
   }
   const lines = result.suggestions.map((s) => s.line);
-  if (values.pick && lines.length > 1) {
+  // Confident answers go straight through; the picker is only worth a keystroke when unsure.
+  if (values.pick && lines.length > 1 && result.confidence < SURE) {
     const picked = fzf(lines);
     if (!picked) process.exit(130);
     console.log(picked);

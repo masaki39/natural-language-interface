@@ -1,16 +1,16 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createBackend, loadDotEnv } from "../src/backend.ts";
 import { NONE, suggest } from "../src/engine.ts";
-import { loadSpec } from "../src/spec.ts";
+import { getSpec } from "../src/spec.ts";
 
-type Case = { request: string; path: string; line?: string };
+type Case = { tool?: string; request: string; path: string; line?: string };
 
-const tool = process.argv[2] ?? "gh";
-const cases = readFileSync(`eval/${tool}.jsonl`, "utf8")
+/** Name of an eval/<name>.jsonl file; cases without a `tool` field use the name as the tool. */
+const name = process.argv[2] ?? "gh";
+const cases = readFileSync(`eval/${name}.jsonl`, "utf8")
   .split("\n")
   .filter(Boolean)
   .map((l) => JSON.parse(l) as Case);
-const spec = loadSpec(tool);
 loadDotEnv();
 const backend = createBackend();
 console.log(backend.name);
@@ -18,6 +18,7 @@ console.log(backend.name);
 const rows = [];
 for (const c of cases) {
   const started = Date.now();
+  const spec = await getSpec(c.tool ?? name);
   const r = await suggest(backend.ask, spec, c.request);
   const ms = Date.now() - started;
   const top = r.ranking[0]!;
@@ -34,7 +35,7 @@ for (const c of cases) {
   };
   rows.push(row);
   const mark = row.top1 ? (row.line_ok === false ? "~" : "✓") : "✗";
-  console.log(`${mark} ${row.confidence.toFixed(2)} ${String(ms).padStart(5)}ms  ${c.request}  →  ${row.got_line ?? row.got}`);
+  console.log(`${mark} ${row.confidence.toFixed(2)} ${String(ms).padStart(5)}ms  ${c.tool ? `[${c.tool}] ` : ""}${c.request}  →  ${row.got_line ?? row.got}`);
 }
 
 const rate = (xs: boolean[]) => `${xs.filter(Boolean).length}/${xs.length} (${((xs.filter(Boolean).length / xs.length) * 100).toFixed(0)}%)`;
@@ -56,6 +57,6 @@ for (const [label, subset] of [
 }
 
 mkdirSync("eval/results", { recursive: true });
-const out = `eval/results/${tool}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+const out = `eval/results/${name}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
 writeFileSync(out, JSON.stringify(rows, null, 2));
 console.log(`\n${out}`);

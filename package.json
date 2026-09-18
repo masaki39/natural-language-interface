@@ -4,7 +4,6 @@
   "description": "Natural-language command line suggestions powered by TypeSafe Jev",
   "scripts": {
     "nli": "tsx src/cli.ts",
-    "gen-spec": "tsx scripts/gen-spec.ts",
     "eval": "tsx scripts/eval.ts",
     "typecheck": "tsc -p ."
   },
