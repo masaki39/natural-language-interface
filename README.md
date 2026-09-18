@@ -36,8 +36,8 @@ flag in the output exists in the tool's spec. No LLM is involved; a suggestion t
 ## Install
 
 ```sh
-pnpm add -g github:masaki39/natural-language-interface   # builds dist/ on install
-pnpm remove -g natural-language-interface               # uninstall
+pnpm add -g https://github.com/masaki39/natural-language-interface/releases/latest/download/natural-language-interface.tgz
+pnpm remove -g natural-language-interface   # uninstall
 ```
 
 Then in `~/.zshrc`:
@@ -58,6 +58,14 @@ an fzf picker shows the top candidates.
 pnpm install
 pnpm nli gh 'PR一覧' --explain    # runs src/ with tsx; a gitignored .env works here (.env.example)
 pnpm typecheck && pnpm build
+```
+
+Releases ship the packed tarball (built dist/, no install scripts), so installing never runs code
+from the repo. To cut one:
+
+```sh
+pnpm pack && mv natural-language-interface-*.tgz natural-language-interface.tgz
+gh release create v<version> natural-language-interface.tgz
 ```
 
 ## Usage

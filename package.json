@@ -21,7 +21,7 @@
   },
   "scripts": {
     "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist/cli.js",
-    "prepare": "pnpm build",
+    "prepack": "pnpm build",
     "nli": "tsx src/cli.ts",
     "eval": "tsx scripts/eval.ts",
     "typecheck": "tsc -p ."
