@@ -28,11 +28,13 @@ Uninstall with `pnpm remove -g natural-language-interface`.
 
 ## Usage
 
-Type a tool and a request at the prompt, then press **Ctrl-X Ctrl-N**. The line is replaced with the command; press Enter to run it.
+Type `nli`, a tool and a request, then press **Enter**. The line is replaced with the command; press Enter again to run it.
 
 ```
-gh リポジトリ一覧   →   gh repo list
+nli gh リポジトリ一覧   →   gh repo list
 ```
+
+Without the `nli` prefix, press **Ctrl-X Ctrl-N** instead (`gh リポジトリ一覧` → `gh repo list`).
 
 Or call it directly:
 
@@ -43,7 +45,10 @@ nli list                         # tools nli can use on this machine
 nli <tool> --refresh             # re-read the tool's commands (after upgrading it)
 ```
 
-To use another key, set `NLI_KEY` before the `eval`, e.g. `NLI_KEY='^[n'` for Alt-N.
+Set these before the `eval` to customize the widget:
+
+- `NLI_KEY='^[n'` — use Alt-N instead of Ctrl-X Ctrl-N
+- `NLI_ENTER=0` — make Enter on `nli ...` run it as a normal command
 
 ## How it works
 
