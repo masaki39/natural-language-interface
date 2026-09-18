@@ -6,12 +6,14 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { createBackend, loadDotEnv } from "./backend.ts";
 import { NONE, suggest, type Result } from "./engine.ts";
+import { listTools } from "./list.ts";
 import { getSpec, SOURCES, type Source } from "./spec.ts";
 
 /** Below this subcommand confidence, alternatives are shown next to the top answer. */
 const SURE = 0.6;
 
 const HELP = `usage: nli <tool> <request...> [options]
+       nli list        tools nli can use (installed, with a spec source)
        nli init zsh    print the zsh widget; add eval "$(nli init zsh)" to ~/.zshrc
 
 Suggest a command line for a natural-language request. Nothing is executed:
@@ -60,6 +62,7 @@ function printInit(shell: string | undefined) {
 
 async function main() {
   if (process.argv[2] === "init") return printInit(process.argv[3]);
+  if (process.argv[2] === "list" && process.argv.length === 3) return console.log(await listTools());
   loadDotEnv();
   const { values, positionals } = parseArgs({
     allowPositionals: true,

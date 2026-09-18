@@ -1,7 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { accessSync, constants, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { expandFigGroup, figSpec } from "./sources/fig.ts";
+import { expandFigGroup, figIndex, figSpec } from "./sources/fig.ts";
 import { ghSpec } from "./sources/gh.ts";
 import { helpSpec } from "./sources/help.ts";
 
@@ -77,7 +77,8 @@ export function usagePositionals(args: string): Positional[] {
   return positionals;
 }
 
-const CACHE_DIR = join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "nli", "specs");
+const CACHE_ROOT = join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "nli");
+const CACHE_DIR = join(CACHE_ROOT, "specs");
 
 function cacheFile(tool: string) {
   return join(CACHE_DIR, `${tool}.json`);
@@ -109,7 +110,8 @@ export async function getSpec(tool: string, { refresh = false, source }: { refre
     if (cached.format === SPEC_FORMAT) return cached;
     source = cached.source;
   }
-  const order: Source[] = source ? [source] : tool === "gh" ? ["gh"] : ["fig", "help"];
+  if (!onPath(tool)) throw new Error(`${tool}: command not found`);
+  const order: Source[] = source ? [source] : tool === "gh" ? ["gh"] : (await figTools()).has(tool) ? ["fig", "help"] : ["help"];
   const errors: string[] = [];
   for (const s of order) {
     try {
@@ -122,6 +124,43 @@ export async function getSpec(tool: string, { refresh = false, source }: { refre
     }
   }
   throw new Error(`could not build a spec for ${tool} (${errors.join("; ")})`);
+}
+
+function onPath(tool: string): boolean {
+  return (process.env.PATH ?? "").split(":").some((dir) => {
+    try {
+      accessSync(join(dir, tool), constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/** Source of each cached spec, keyed by tool. */
+export function cachedSpecs(): Map<string, Source> {
+  const cached = new Map<string, Source>();
+  if (!existsSync(CACHE_DIR)) return cached;
+  for (const file of readdirSync(CACHE_DIR)) {
+    if (!file.endsWith(".json")) continue;
+    try {
+      const spec = JSON.parse(readFileSync(join(CACHE_DIR, file), "utf8")) as Spec;
+      cached.set(spec.tool, spec.source);
+    } catch {
+      // A half-written cache file is rebuilt on next use.
+    }
+  }
+  return cached;
+}
+
+/** Tools with a Fig spec, cached since the list only changes with FIG_VERSION. */
+export async function figTools(): Promise<Set<string>> {
+  const file = join(CACHE_ROOT, "fig-index.json");
+  if (existsSync(file)) return new Set(JSON.parse(readFileSync(file, "utf8")) as string[]);
+  const names = await figIndex();
+  mkdirSync(CACHE_ROOT, { recursive: true });
+  writeFileSync(file, JSON.stringify(names));
+  return new Set(names);
 }
 
 /** Fill a lazily loaded group in place and persist it, so the fetch happens once. */

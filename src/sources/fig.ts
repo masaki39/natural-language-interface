@@ -100,6 +100,15 @@ function convert(root: FigCommand, tool: string, prefix: string): Pick<Spec, "co
   return { commands, groups: groups.filter((g) => g.path !== prefix) };
 }
 
+/** Names of the tools that have a Fig spec, from jsDelivr's file listing of the pinned release. */
+export async function figIndex(): Promise<string[]> {
+  const url = `https://data.jsdelivr.com/v1/packages/npm/@withfig/autocomplete@${FIG_VERSION}?structure=flat`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  if (!res.ok) throw new Error(`jsDelivr ${res.status} listing Fig specs`);
+  const { files } = (await res.json()) as { files: { name: string }[] };
+  return files.map((f) => f.name.match(/^\/build\/([^/]+)\.js$/)?.[1]).filter((n): n is string => Boolean(n));
+}
+
 export async function figSpec(tool: string): Promise<Omit<Spec, "format">> {
   const root = await fetchFig(tool);
   return { tool, source: "fig", version: `@withfig/autocomplete@${FIG_VERSION}`, ...convert(root, tool, "") };
