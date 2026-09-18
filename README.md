@@ -37,19 +37,16 @@ export OPENROUTER_API_KEY=...   # or TYPESAFE_API_KEY=...
 eval "$(nli init zsh)"
 ```
 
-To update, run the same `pnpm add -g` again. To uninstall: `pnpm remove -g natural-language-interface`.
+To update: `nli update` (`nli update --check` only reports). To uninstall: `pnpm remove -g natural-language-interface`.
 
 ## 🚀 Usage
 
 | Type at the prompt | Press | Becomes |
 | --- | --- | --- |
 | `nli gh リポジトリ一覧` | **Enter** | `gh repo list` |
-| `gh リポジトリ一覧` | **Alt-N** | `gh repo list` |
+| `gh リポジトリ一覧` | **Ctrl-X Ctrl-N** | `gh repo list` |
 
 The line is replaced with the command. Press Enter again to run it.
-
-> [!TIP]
-> On macOS, Alt-N needs Option to act as Alt: `macos-option-as-alt = true` in Ghostty, "Use Option as Meta key" in Terminal.app, or "Esc+" for the Option key in iTerm2.
 
 You can also call nli directly:
 
@@ -66,8 +63,11 @@ Set these in `~/.zshrc` **before** `eval "$(nli init zsh)"`:
 
 | Variable | Default | Effect |
 | --- | --- | --- |
-| `NLI_KEY` | `'^[n'` (Alt-N) | Key that turns `<tool> <request>` into a command. E.g. `'^X^N'` for Ctrl-X Ctrl-N |
+| `NLI_KEY` | `'^X^N'` (Ctrl-X Ctrl-N) | Key that turns `<tool> <request>` into a command |
 | `NLI_ENTER` | `1` | Set to `0` to make Enter on `nli ...` run it as a normal command |
+
+> [!TIP]
+> Want a single key? In vi mode (`bindkey -v`), `NLI_KEY='^N'` (Ctrl-N) is free. In emacs mode Ctrl-N is "next history", so prefer `NLI_KEY='^[n'` (Alt-N); on macOS that needs Option to act as Alt (`macos-option-as-alt = true` in Ghostty, "Use Option as Meta key" in Terminal.app, "Esc+" in iTerm2).
 
 > [!NOTE]
 > Enter only suggests for lines like `nli <tool> <request>`. Lines with options (`nli gh PR一覧 --explain`), `nli list` and every other command run as usual, and your own Enter customizations (e.g. alias expansion) keep working.
@@ -90,4 +90,4 @@ pnpm eval gh                     # accuracy on eval/gh.jsonl
 pnpm typecheck && pnpm build
 ```
 
-Release: `pnpm pack`, rename the tarball to `natural-language-interface.tgz`, then `gh release create v<version> natural-language-interface.tgz`.
+Release: `pnpm release patch` (or `minor`, `major`, `X.Y.Z`; add `--dry-run` to preview). It bumps the version, then pushes a commit and a `v<version>` tag, and the tag triggers the workflow that publishes the release.

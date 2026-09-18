@@ -1,7 +1,7 @@
 # Load from ~/.zshrc with: eval "$(nli init zsh)"
 #
 #   nli gh リポジトリ一覧 <Enter>   →   gh repo list      (NLI_ENTER=0 to opt out)
-#   gh リポジトリ一覧 <Alt-N>        →   gh repo list      (NLI_KEY to change the key)
+#   gh リポジトリ一覧 <Ctrl-X Ctrl-N> →   gh repo list      (NLI_KEY to change the key)
 #
 # Set NLI_KEY / NLI_ENTER before the eval.
 #
@@ -30,7 +30,7 @@ nli-widget() {
 }
 zle -N nli-widget
 for keymap in emacs viins vicmd; do
-  bindkey -M $keymap "${NLI_KEY:-^[n}" nli-widget
+  bindkey -M $keymap "${NLI_KEY:-^X^N}" nli-widget
 done
 unset keymap
 

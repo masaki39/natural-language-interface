@@ -24,6 +24,7 @@
     "prepack": "pnpm build",
     "nli": "tsx src/cli.ts",
     "eval": "tsx scripts/eval.ts",
+    "release": "tsx scripts/release.ts",
     "typecheck": "tsc -p ."
   },
   "dependencies": {

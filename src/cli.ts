@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { createBackend, loadDotEnv } from "./backend.ts";
 import { NONE, suggest, type Result } from "./engine.ts";
 import { listTools } from "./list.ts";
+import { update } from "./update.ts";
 import { getSpec, SOURCES, type Source } from "./spec.ts";
 
 /** Below this subcommand confidence, alternatives are shown next to the top answer. */
@@ -15,6 +16,8 @@ const SURE = 0.6;
 const HELP = `usage: nli <tool> <request...> [options]
        nli list        tools nli can use (installed, with a spec source)
        nli init zsh    print the zsh keybindings; add eval "$(nli init zsh)" to ~/.zshrc
+       nli update      install the latest release (--check: only report)
+       nli --version   print the installed version
 
 Suggest a command line for a natural-language request. Nothing is executed:
 the command goes to stdout, explanations go to stderr.
@@ -55,16 +58,25 @@ function fzf(lines: string[]): string | undefined {
   return r.status === 0 ? r.stdout.trim() : undefined;
 }
 
-/** The widget ships in shell/, next to both src/ (tsx) and dist/ (installed). */
+/** The package root holds shell/ and package.json, next to both src/ (tsx) and dist/ (installed). */
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
 function printInit(shell: string | undefined) {
   if (shell !== "zsh") throw new Error(`nli init supports zsh only (got ${shell ?? "nothing"})`);
-  const file = join(dirname(fileURLToPath(import.meta.url)), "..", "shell", "nli.zsh");
-  process.stdout.write(readFileSync(file, "utf8"));
+  process.stdout.write(readFileSync(join(ROOT, "shell", "nli.zsh"), "utf8"));
+}
+
+function version(): string {
+  return (JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string }).version;
 }
 
 async function main() {
   if (process.argv[2] === "init") return printInit(process.argv[3]);
   if (process.argv[2] === "list" && process.argv.length === 3) return console.log(await listTools());
+  if (process.argv[2] === "update") {
+    const fromSource = basename(dirname(fileURLToPath(import.meta.url))) === "src";
+    return process.exit(await update(version(), { check: process.argv.includes("--check"), fromSource }));
+  }
   loadDotEnv();
   const { values, positionals } = parseArgs({
     allowPositionals: true,
@@ -74,8 +86,10 @@ async function main() {
       refresh: { type: "boolean" },
       source: { type: "string" },
       help: { type: "boolean", short: "h" },
+      version: { type: "boolean", short: "v" },
     },
   });
+  if (values.version) return console.log(version());
   const [tool, ...words] = positionals;
   const refreshOnly = Boolean(values.refresh || values.source) && words.length === 0;
   if (values.help || !tool || (words.length === 0 && !refreshOnly)) {
